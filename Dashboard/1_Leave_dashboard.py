@@ -7,11 +7,11 @@ import numpy as np
 import streamlit as st
 import altair as alt
 from pathlib import Path
-import calendar
+# import calendar
 import plotly.express as px
 import plotly.graph_objects as go
 
-MONTH_ORDER = list(calendar.month_abbr)[1:]  # ['Jan','Feb',...,'Dec']
+# MONTH_ORDER = list(calendar.month_abbr)[1:]  # ['Jan','Feb',...,'Dec']
 WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 # Ensure the repo root is in sys.path so local modules can be found
@@ -80,11 +80,8 @@ def compute_transitions(df: pd.DataFrame) -> pd.DataFrame:
     df_patterns = df[np.isin(mask, list(PATTERNS))].copy()
     return df_patterns
 
-import calendar
-import plotly.express as px
-import plotly.graph_objects as go
 
-MONTH_ORDER = list(calendar.month_abbr)[1:]  # ['Jan','Feb',...,'Dec']
+MONTH_ORDER = [MONTH_LABELS[i] for i in range(1, 13)]
 
 def make_histogram_month(transitions: pd.DataFrame, barmode: str = "stack") -> go.Figure:
     """
@@ -202,48 +199,49 @@ def make_histogram_depo(transitions: pd.DataFrame, barmode: str = "stack") -> go
     return fig
 
 
-def make_day_month_heatmap(transitions: pd.DataFrame) -> go.Figure:
-    if transitions.empty:
-        return go.Figure()
-
-
-    # Current & next day tall table
-    part_current = transitions.assign(
-        MONTH=lambda d: d["DATE"].dt.month.astype(int),
-        DAY=lambda d: d["DATE"].dt.day.astype(int)
-    )[["MONTH", "DAY"]]
-    part_next = transitions[["NEXT_MONTH", "NEXT_DAY"]].rename(columns={"NEXT_MONTH": "MONTH", "NEXT_DAY": "DAY"}).dropna()
-    part_next["MONTH"] = part_next["MONTH"].astype(int)
-    part_next["DAY"] = part_next["DAY"].astype(int)
-
-    tall = pd.concat([part_current, part_next], ignore_index=True)
-    agg = tall.groupby(["MONTH", "DAY"], as_index=False).size().rename(columns={"size": "COUNT"})
-
-    # Full grid and month labels
-    grid = pd.MultiIndex.from_product([range(1, 13), range(1, 32)], names=["MONTH", "DAY"]).to_frame(index=False)
-    heat = grid.merge(agg, on=["MONTH", "DAY"], how="left").fillna({"COUNT": 0})
-    heat["MONTH_LABEL"] = pd.Categorical([calendar.month_abbr[m] for m in heat["MONTH"]], categories=MONTH_ORDER, ordered=True)
-
-    # Pivot to matrix (y=day, x=month label)
-    mat = heat.pivot(index="DAY", columns="MONTH_LABEL", values="COUNT").reindex(index=range(1, 32), columns=MONTH_ORDER)
-
-    fig = go.Figure(
-        data=go.Heatmap(
-            z=mat.values,
-            x=mat.columns,
-            y=mat.index,
-            coloraxis="coloraxis",
-            hovertemplate="Month=%{x}<br>Day=%{y}<br>Occurrences=%{z}<extra></extra>"
-        )
-    )
-    fig.update_layout(
-        coloraxis=dict(colorbar_title="Occurrences"),
-        xaxis_title="Month",
-        yaxis_title="Day of Month",
-        yaxis=dict(autorange="reversed")  # optional; remove if you want day 1 at bottom
-    )
-    return fig
-
+# def make_day_month_heatmap(transitions: pd.DataFrame) -> go.Figure:
+#     if transitions.empty:
+#         return go.Figure()
+#
+#
+#     # Current & next day tall table
+#     part_current = transitions.assign(
+#         MONTH=lambda d: d["DATE"].dt.month.astype(int),
+#         DAY=lambda d: d["DATE"].dt.day.astype(int)
+#     )[["MONTH", "DAY"]]
+#     part_next = transitions[["NEXT_MONTH", "NEXT_DAY"]].rename(columns={"NEXT_MONTH": "MONTH", "NEXT_DAY": "DAY"}).dropna()
+#     part_next["MONTH"] = part_next["MONTH"].astype(int)
+#     part_next["DAY"] = part_next["DAY"].astype(int)
+#
+#     tall = pd.concat([part_current, part_next], ignore_index=True)
+#     agg = tall.groupby(["MONTH", "DAY"], as_index=False).size().rename(columns={"size": "COUNT"})
+#
+#     # Full grid and month labels
+#     grid = pd.MultiIndex.from_product([range(1, 13), range(1, 32)], names=["MONTH", "DAY"]).to_frame(index=False)
+#     heat = grid.merge(agg, on=["MONTH", "DAY"], how="left").fillna({"COUNT": 0})
+#     heat["MONTH_LABEL"] = pd.Categorical([calendar.month_abbr[m] for m in heat["MONTH"]],
+#                                          categories=MONTH_ORDER, ordered=True)
+#
+#     # Pivot to matrix (y=day, x=month label)
+#     mat = heat.pivot(index="DAY", columns="MONTH_LABEL", values="COUNT").reindex(index=range(1, 32), columns=MONTH_ORDER)
+#
+#     fig = go.Figure(
+#         data=go.Heatmap(
+#             z=mat.values,
+#             x=mat.columns,
+#             y=mat.index,
+#             coloraxis="coloraxis",
+#             hovertemplate="Month=%{x}<br>Day=%{y}<br>Occurrences=%{z}<extra></extra>"
+#         )
+#     )
+#     fig.update_layout(
+#         coloraxis=dict(colorbar_title="Occurrences"),
+#         xaxis_title="Month",
+#         yaxis_title="Day of Month",
+#         yaxis=dict(autorange="reversed")  # optional; remove if you want day 1 at bottom
+#     )
+#     return fig
+#
 
 def make_weekday_month_heatmap(transitions: pd.DataFrame) -> go.Figure:
     if transitions.empty:
@@ -260,7 +258,7 @@ def make_weekday_month_heatmap(transitions: pd.DataFrame) -> go.Figure:
 
     tall = pd.concat([part_current, part_next], ignore_index=True)
     agg = tall.groupby(["MONTH", "WEEKDAY_NAME"], as_index=False).size().rename(columns={"size": "COUNT"})
-    agg["MONTH_LABEL"] = pd.Categorical([calendar.month_abbr[m] for m in agg["MONTH"]], categories=MONTH_ORDER, ordered=True)
+    agg["MONTH_LABEL"] = pd.Categorical(agg["MONTH"].map(MONTH_LABELS), categories=MONTH_ORDER, ordered=True)
 
     mat = (
         agg.pivot(index="WEEKDAY_NAME", columns="MONTH_LABEL", values="COUNT")
@@ -284,7 +282,6 @@ def make_weekday_month_heatmap(transitions: pd.DataFrame) -> go.Figure:
     )
     return fig
 
-import plotly.graph_objects as go
 
 def make_pareto_by_depot_plotly(transitions: pd.DataFrame, top_n: int | None = None) -> go.Figure:
     """
